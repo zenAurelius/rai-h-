@@ -3,61 +3,10 @@ import pandas as pd
 import numpy as np
 import datetime
 
-df = pd.read_csv('./data/plat_2017_16.csv')
-df.drop('NUM_CO_DAY', axis=1)
-print(df.describe())
+df = pd.read_csv('./data/plat_2016_16.csv')
 
-coco = df.groupby('CONDUCTEUR')
-print(len(df))
-print(len(coco))
-nbT = 0
-def id_flat(group, row) :
-	global nbT
-	print(nbT, end='\r')
-	nbT += 1
-	
-	idx = np.flatnonzero(group['REFERENCE'] == row.REFERENCE)
-	nb_co_day = len(group)
-	num_co_day = 0
-	if(len(idx) > 0) :
-		num_co_day = idx[0] + 1
-	return [num_co_day, nb_co_day]
-	
-def id_flat0(group, row) :
-	pastOfCo = group[group.REFERENCE < row.REFERENCE]
-	lastWin = np.flatnonzero(pastOfCo['RESULTAT'] == 1)
-	print(pastOfCo)
-	print(lastWin)
-	return [0, 0]
+print(df.POIDS.value_counts())
 
-print(datetime.datetime.now())
-nb_sd_g_co = 0
-nb_sd_r_co = 0
-r = []
-for i, (u, r_co) in enumerate(coco) :
-	# 1
-	col = r_co.apply(lambda x : id_flat0(r_co, x), axis=1, result_type='expand')
-	# 2
-	sd_g_co = r_co.groupby('DATE_COURSE')
-	nb_sd_g_co += len(sd_g_co)
-	for j, (_, sd_r_co) in enumerate(sd_g_co) :
-		# print(sd_r_co)
-		nb_sd_r_co += len(sd_r_co)
-		
-		# print(r)
-		col = sd_r_co.apply(lambda x : id_flat(sd_r_co, x), axis=1, result_type='expand')
-		# print("0 :")
-		# print(col.iloc[:,0])
-		# print("1 :")
-		# print(col.iloc[:,1])
-		r.append(sd_r_co.assign(NUM_CO_DAY = col.iloc[:,0], NB_CO_DAY= col.iloc[:,1]))
-		# print(sd_r_co[['NUM_CO_DAY', 'NB_CO_DAY']])
-
-print(datetime.datetime.now())
-dfu = pd.concat(r)
-print(datetime.datetime.now())
-print(dfu[['NUM_CO_DAY', 'NB_CO_DAY']].describe())
-print(dfu[['NUM_CO_DAY', 'NB_CO_DAY']])
 
 '''
 print(datetime.datetime.now())
