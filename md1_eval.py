@@ -93,7 +93,7 @@ class HraiEvaluator:
 		self.dataset = self.dataset.reindex(np.random.permutation(self.dataset.index)).reset_index(drop=True)
 		print(self.dataset.head(10))
 
-		self.features = self.dataset.drop(columns=['TX_HIT_CO', 'LIEUX', 'PRIX', 'OEILLERE','RPT_COUPLE', 'RPT_TRIO', 'RPT_TIERCEO', 'RPT_TIERCED', 'RPT_QUARTEO', 'RPT_QUARTED', 'RPT_QUINTEO', 'RPT_QUINTED', 'TARGET', 'REFERENCE'])
+		self.features = self.dataset.drop(columns=['TX_HIT_CO', 'LIEUX', 'PRIX', 'OEILLERE','RESULTAT_COURSE', 'RPT_COUPLE', 'RPT_TRIO', 'RPT_TIERCEO', 'RPT_TIERCED', 'RPT_QUARTEO', 'RPT_QUARTED', 'RPT_QUINTEO', 'RPT_QUINTED', 'TARGET', 'REFERENCE'])
 		print("Features loaded :")
 		print(self.features.head(10))
 		print(self.features.describe())
