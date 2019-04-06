@@ -3,10 +3,16 @@ import pandas as pd
 import numpy as np
 import datetime
 
-df = pd.read_csv('./data/plat_2016_16.csv')
+df = pd.read_csv('./data/plat_enr1.csv')
 
-print(df.POIDS.value_counts())
 
+
+
+'''
+print(df.POIDS.value_counts(sort=False))
+print(df[df.DPOIDS_LAST_CH < -15].NOM_CHEVAL)
+print(df[df.NOM_CHEVAL == 'Malcolm (Spa)'][['REFERENCE', 'LIEUX', 'DATE_COURSE', 'POIDS']])
+'''
 
 '''
 print(datetime.datetime.now())
