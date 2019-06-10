@@ -23,9 +23,13 @@ class md1Preparator :
 
 	def extract_features(self, datas) :
 
+		print('EXTRACT INFORMATION DATA...') #-----------------------------------------------------
+		self.dataset = datas[['NUM_PARTICIPATION', 'RESULTAT_COURSE']]
+
 		print('EXTRACT CATEGORICAL FEATURES...') #-------------------------------------------------
-		self.dataset = datas[['LIEUX', 'DISTANCE', 'PRIX', 'SEXE_CHEVAL', 'SEASON']].copy()
+		self.dataset[['LIEUX', 'DISTANCE', 'PRIX', 'SEXE_CHEVAL', 'SEASON']] = datas[['LIEUX', 'DISTANCE', 'PRIX', 'SEXE_CHEVAL', 'SEASON']].copy()
 		self.dataset.loc[:,'OEILLERE'] = datas['OEILLERE'].notna().astype(float)
+		self.dataset.loc[:,'SEXE_CHEVAL'] = datas.SEXE_CHEVAL.apply(lambda x : self.encodeSexe(x))
 
 		print('REFERENCE...') #--------------------------------------------------------------------
 		self.dataset.loc[:,'REFERENCE'] = datas.REFERENCE
@@ -60,7 +64,7 @@ class md1Preparator :
 	#**********************************************************************************************
 	def add_target(self, datas)	:
 		# ajoute les rapports 
-		self.dataset[['RESULTAT_COURSE', 'RPT_COUPLE', 'RPT_TRIO', 'RPT_TIERCEO', 'RPT_TIERCED', 'RPT_QUARTEO', 'RPT_QUARTED', 'RPT_QUINTEO', 'RPT_QUINTED']] = datas[['RESULTAT_COURSE', 'RPT_COUPLE', 'RPT_TRIO', 'RPT_TIERCEO', 'RPT_TIERCED', 'RPT_QUARTEO', 'RPT_QUARTED', 'RPT_QUINTEO', 'RPT_QUINTED']]
+		self.dataset[['RPT_COUPLE', 'RPT_TRIO', 'RPT_TIERCEO', 'RPT_TIERCED', 'RPT_QUARTEO', 'RPT_QUARTED', 'RPT_QUINTEO', 'RPT_QUINTED']] = datas[['RPT_COUPLE', 'RPT_TRIO', 'RPT_TIERCEO', 'RPT_TIERCED', 'RPT_QUARTEO', 'RPT_QUARTED', 'RPT_QUINTEO', 'RPT_QUINTED']]
 		self.dataset['TARGET'] = datas.apply(lambda x : self.convertResultat(x), axis=1)
 		self.dataset['COTE'] = datas['COTE']
 		print(self.dataset[['RPT_COUPLE', 'RPT_TRIO', 'RPT_TIERCEO', 'RPT_TIERCED', 'RPT_QUARTEO', 'RPT_QUARTED', 'RPT_QUINTEO', 'RPT_QUINTED', 'TARGET']].describe())
@@ -75,9 +79,18 @@ class md1Preparator :
 		elif row["RESULTAT"] == 4 : 
 			return 0.125
 		elif row["RESULTAT"] == 5 : 
-			return 0.075
+			return 0.06
 		else :
 			return 0.0	
+
+	def encodeSexe(self, row):
+		if(row == 'F') : 
+			return 1.0
+		if(row == 'H') :
+			return 0.5
+		if(row == 'M') :
+			return 0.0
+		return 0.5
 
 	def save_data(self, trainfile, devfile):
 

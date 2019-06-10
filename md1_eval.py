@@ -9,7 +9,7 @@ import tensorflow as tf
 from matplotlib import pyplot as plt
 from matplotlib import cm
 
-from sklearn import metrics
+#from sklearn import metrics
 
 import operator
 
@@ -112,7 +112,7 @@ class HraiEvaluator:
 		ds = tf.data.Dataset.from_tensor_slices((features,targets)) 
 		ds = ds.batch(batch_size).repeat(num_epochs)
 		if shuffle :
-			ds = ds.shuffle(buffer_size=10000)
+			ds = ds.shuffle(buffer_size=10000) 
 
 		features, labels = ds.make_one_shot_iterator().get_next()
 		return features, labels

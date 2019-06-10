@@ -15,6 +15,7 @@ class md1_Concentrator:
 	###############################################################################################
 	def __init__(self) :
 		self.stats = None
+		pd.options.display.max_rows = 16
 		
 	###############################################################################################
 	#
@@ -34,17 +35,24 @@ class md1_Concentrator:
 
 		courses = self.data.groupby('REFERENCE')
 		for ref, course in courses:
-			print(ref)
-			#print(course[["REFERENCE", "NUM_PARTICIPATION", "CORDE", "COTE", "CO_ELO"]])
-			
+			#print(ref)
+			#print(course[["REFERENCE", "NUM_PARTICIPATION", "COTE"]])
+			if(len(course) != 16):
+				continue
+			if(course["RESULTAT_COURSE"].iloc[0] == 'Annulée') :
+				continue
+
 			reel_result = list(map(int, course["RESULTAT_COURSE"].iloc[0].split('-')))
-			print(reel_result)
-			rapports = course.iloc[0, -10:-1].tolist()
+			#print(reel_result)
+			rapports = course.iloc[0][['COTE', 'RPT_COUPLE', 'RPT_TRIO', 'RPT_TIERCEO', 'RPT_TIERCED', 'RPT_QUARTEO', 'RPT_QUARTED', 'RPT_QUINTEO', 'RPT_QUINTED']].tolist()
+			#print(rapports)
 			course = course.sort_values("NUM_PARTICIPATION", ascending=True)
 			#print(course[['COTE', "RPT_COUPLE","RPT_TRIO","RPT_TIERCEO","RPT_TIERCED","RPT_QUARTEO","RPT_QUARTED","RPT_QUINTEO","RPT_QUINTED"]])
-			
+			#print(course[["REFERENCE", "NUM_PARTICIPATION", "COTE"]])
+
+			#print(reel_result[0]-1)
 			rapports[0] = course["COTE"].iloc[reel_result[0]-1]
-			print(rapports)
+			#print(rapports)
 			
 			sum_pred = course["PREDICTION"].agg(np.sum)
 			course["PRED_POND"] = course["PREDICTION"].apply(lambda x: 100 * x / sum_pred)
@@ -54,7 +62,7 @@ class md1_Concentrator:
 			#print(course.head())
 			pred_result = course["NUM_PARTICIPATION"].iloc[0:5].tolist()
 			
-			print(pred_result)
+			#print(pred_result)
 			self.majStats("num_part", reel_result, pred_result, rapports)
 			
 			course = course.sort_values("COTE", ascending=True)

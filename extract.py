@@ -8,7 +8,7 @@ class HraiExtractor:
 
 
 	def run(self):
-		self.df = pd.read_csv('./data/plat_enr.csv', na_values = [''])
+		self.df = pd.read_csv('./data/plat_enr1.csv', na_values = [''])
 		
 		self.df_2016 = self.df[(self.df.DATE_COURSE >= '2016-01-01') & (self.df.DATE_COURSE <= '2016-12-31') & (self.df.CONDUCTEUR.notna())].sort_values("REFERENCE", ascending=True)
 		print(self.df_2016.describe())
