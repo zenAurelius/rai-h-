@@ -87,9 +87,9 @@ class Enrichisseur:
 		#self.df = full[full.TYPE_COURSE == 'p']
 		#self.df.to_csv('./data/plat.csv', index=False)
 		
-		self.df = pd.read_csv('./data/plat_enr.csv')
+		self.df = pd.read_csv('./data/plat.csv')
 		print(len(self.df))
-		
+				
 		''' # ENRICHISSEMENT DE SEASON
 		self.df['SEASON'] = pd.Series(self.df.DATE_COURSE.str.split('-', expand=True)[1], dtype='int64').mod(12).floordiv(3)
 		print(self.df['SEASON'].describe())
@@ -117,9 +117,11 @@ class Enrichisseur:
 			if(i%1000 == 0):
 				dfs.append(pd.concat(r))
 				r = []
-		
+		if len(r) > 0 :
+			dfs.append(pd.concat(r))		
 		self.df = pd.concat(dfs)
 		'''
+
 		# 1 
 		'''
 		print(datetime.datetime.now())
@@ -136,8 +138,12 @@ class Enrichisseur:
 			if(i%100 == 0):
 				dfs.append(pd.concat(r))
 				r = []
-				print(i)
-				print(len(dfs))
+		if len(r) > 0 :
+			dfs.append(pd.concat(r))		
+		self.df = pd.concat(dfs)
+		'''
+		
+		# 2 
 		'''			
 		print(datetime.datetime.now())
 		self.nbT = 0
@@ -153,11 +159,13 @@ class Enrichisseur:
 			if(i%2000 == 0):
 				dfs.append(pd.concat(r))
 				r = []
-				
+		if len(r) > 0 :
+			dfs.append(pd.concat(r))		
 		self.df = pd.concat(dfs)
-		print(datetime.datetime.now())
-				
-		self.df.to_csv('./data/plat_enr1.csv', index=False)
+		
+		'''
+		print(datetime.datetime.now())	
+		self.df.to_csv('./data/plat_enr2.csv', index=False)
 		
 		
 		''' # ENRICHISSEMENT CO SUR 2017_16
