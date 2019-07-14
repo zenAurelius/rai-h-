@@ -19,6 +19,9 @@ class md2Preparator :
         print(datas.describe())
         return datas
 
+    def f(self, x) :
+        xsorted = x.sort_values('COTE', ascending=True)
+        return xsorted.iloc[1]
     #----------------------------------------------------------------------------------------------
     def extract_features(self, datas) :
         # un enregistrement par course
@@ -29,12 +32,32 @@ class md2Preparator :
 
         self.datas = pd.DataFrame(columns=['LIEUX'])
         self.datas.LIEUX = courses.first().LIEUX.apply(lambda x: self.lieux.index(x) / self.nb_lieux)
-        print(courses.LIEUX.apply(lambda x: self.lieux.index(x.first()) / self.nb_lieux))
         print(self.datas)
 
-        print(datas[datas.RESULTAT == 1]['COTE'])
-        self.datas['COTE'] = (datas[datas.RESULTAT == 1]['COTE'])
-        print(self.datas)
+        fav = datas.loc[courses['COTE'].idxmin()][['REFERENCE', 'NUM_PARTICIPATION', 'RESULTAT']]
+        fav['TARGET1'] = fav.apply(lambda x : 1 if x['RESULTAT'] == 1 else 0, axis=1)
+        fav['TARGET2'] = fav.apply(lambda x : 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 2) else 0, axis=1)
+        fav['TARGET3'] = fav.apply(lambda x : 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 3) else 0, axis=1)
+        print(fav)
+        print(fav.TARGET1.value_counts())
+        print(fav.TARGET2.value_counts())
+        print(fav.TARGET3.value_counts())
+
+        sfav = courses.apply(self.f)[['NUM_PARTICIPATION', 'RESULTAT']]
+        sfav['TARGET1'] = sfav.apply(lambda x : 1 if x['RESULTAT'] == 1 else 0, axis=1)
+        sfav['TARGET2'] = sfav.apply(lambda x : 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 2) else 0, axis=1)
+        sfav['TARGET3'] = sfav.apply(lambda x : 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 3) else 0, axis=1)
+        print(sfav)
+        print(sfav.TARGET1.value_counts())
+        print(sfav.TARGET2.value_counts())
+        print(sfav.TARGET3.value_counts())
+
+        cote = datas[datas.RESULTAT == 1][['REFERENCE', 'COTE']]
+        self.datas['COTE'] = (cote.set_index('REFERENCE'))
+        self.datas['TARGET'] = self.datas.apply( lambda x: 1 if x['COTE'] > 8.8 else 0, axis=1)
+        #print(self.datas)
+        #print(self.datas.describe())
+        #print(self.datas.TARGET.value_counts())
 
     #----------------------------------------------------------------------------------------------
     def add_target(self, datas) :
