@@ -19,9 +19,19 @@ class md2Preparator :
         print(datas.describe())
         return datas
 
-    def f(self, x) :
-        xsorted = x.sort_values('COTE', ascending=True)
-        return xsorted.iloc[1]
+    #----------------------------------------------------------------------------------------------
+    def extract_nth(self, x, col_name, pos) :
+        xsorted = x.sort_values(col_name, ascending=True)
+        return xsorted.iloc[pos]
+
+    #----------------------------------------------------------------------------------------------
+    def extract_ispos(self, x):
+        list_pos = []
+        list_pos.append(1 if x['RESULTAT'] == 1 else 0)
+        list_pos.append(1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 2) else 0)
+        list_pos.append(1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 3) else 0)
+        return list_pos
+
     #----------------------------------------------------------------------------------------------
     def extract_features(self, datas) :
         # un enregistrement par course
@@ -34,24 +44,19 @@ class md2Preparator :
         self.datas.LIEUX = courses.first().LIEUX.apply(lambda x: self.lieux.index(x) / self.nb_lieux)
         print(self.datas)
 
-        fav = datas.loc[courses['COTE'].idxmin()][['REFERENCE', 'NUM_PARTICIPATION', 'RESULTAT']]
-        fav['TARGET1'] = fav.apply(lambda x : 1 if x['RESULTAT'] == 1 else 0, axis=1)
-        fav['TARGET2'] = fav.apply(lambda x : 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 2) else 0, axis=1)
-        fav['TARGET3'] = fav.apply(lambda x : 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 3) else 0, axis=1)
+        fav = datas.loc[courses['COTE'].idxmin()][['REFERENCE', 'NUM_PARTICIPATION', 'RESULTAT', 'RESULTAT_COURSE']]
+        print(fav.apply(lambda x: self.extract_ispos(x), axis=1, result_type='expand'))
+        fav[['TARGET1','TARGET2','TARGET3']] = fav.apply(lambda x: self.extract_ispos(x), axis=1, result_type='expand')
         print(fav)
-        print(fav.TARGET1.value_counts())
-        print(fav.TARGET2.value_counts())
-        print(fav.TARGET3.value_counts())
+        #print(fav.TARGET1.value_counts())
+        #print(fav.TARGET2.value_counts())
+        #print(fav.TARGET3.value_counts())
 
-        sfav = courses.apply(self.f)[['NUM_PARTICIPATION', 'RESULTAT']]
-        sfav['TARGET1'] = sfav.apply(lambda x : 1 if x['RESULTAT'] == 1 else 0, axis=1)
-        sfav['TARGET2'] = sfav.apply(lambda x : 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 2) else 0, axis=1)
-        sfav['TARGET3'] = sfav.apply(lambda x : 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 3) else 0, axis=1)
-        print(sfav)
-        print(sfav.TARGET1.value_counts())
-        print(sfav.TARGET2.value_counts())
-        print(sfav.TARGET3.value_counts())
-
+        sfav = courses.apply(lambda x : self.extract_nth(x, 'COTE', 1))[['NUM_PARTICIPATION', 'RESULTAT']]
+        sfav[['TARGET1','TARGET2','TARGET3']] = sfav.apply(lambda x: self.extract_ispos(x), axis=1, result_type='expand')
+        #print(sfav)
+        #print(pd.concat([self.datas, sfav], axis=1, sort=False))
+        
         cote = datas[datas.RESULTAT == 1][['REFERENCE', 'COTE']]
         self.datas['COTE'] = (cote.set_index('REFERENCE'))
         self.datas['TARGET'] = self.datas.apply( lambda x: 1 if x['COTE'] > 8.8 else 0, axis=1)
