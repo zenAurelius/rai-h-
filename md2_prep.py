@@ -42,27 +42,35 @@ class md2Preparator :
 
         self.datas = pd.DataFrame(columns=['LIEUX'])
         self.datas.LIEUX = courses.first().LIEUX.apply(lambda x: self.lieux.index(x) / self.nb_lieux)
-        print(self.datas)
-
-        fav = datas.loc[courses['COTE'].idxmin()][['REFERENCE', 'NUM_PARTICIPATION', 'RESULTAT', 'RESULTAT_COURSE']]
-        print(fav.apply(lambda x: self.extract_ispos(x), axis=1, result_type='expand'))
-        fav[['TARGET1','TARGET2','TARGET3']] = fav.apply(lambda x: self.extract_ispos(x), axis=1, result_type='expand')
-        print(fav)
-        #print(fav.TARGET1.value_counts())
-        #print(fav.TARGET2.value_counts())
-        #print(fav.TARGET3.value_counts())
-
+        self.datas['NB_PARTANT'] = courses.first().NB_PARTANT
+        
+        fav = courses.apply(lambda x : self.extract_nth(x, 'COTE', 0))[['NUM_PARTICIPATION', 'RESULTAT', 'RESULTAT_COURSE']]
+        fav['TARGET'] = fav.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 2) else 0, axis=1)
+        self.datas[['FAV1', 'TARGET1']] = fav[['NUM_PARTICIPATION', 'TARGET']]
+        
         sfav = courses.apply(lambda x : self.extract_nth(x, 'COTE', 1))[['NUM_PARTICIPATION', 'RESULTAT']]
-        sfav[['TARGET1','TARGET2','TARGET3']] = sfav.apply(lambda x: self.extract_ispos(x), axis=1, result_type='expand')
+        sfav['TARGET'] = sfav.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 2) else 0, axis=1)
+        self.datas[['FAV2', 'TARGET2']] = sfav[['NUM_PARTICIPATION', 'TARGET']]
+
+        tfav = courses.apply(lambda x : self.extract_nth(x, 'COTE', 2))[['NUM_PARTICIPATION', 'RESULTAT']]
+        tfav['TARGET'] = tfav.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 2) else 0, axis=1)
+        self.datas[['FAV3', 'TARGET3']] = tfav[['NUM_PARTICIPATION', 'TARGET']]
+        
         #print(sfav)
         #print(pd.concat([self.datas, sfav], axis=1, sort=False))
-        
+
+        self.datas['TARGETA'] = self.datas.TARGET1
+        self.datas['TARGETB'] = self.datas.TARGET1 | self.datas.TARGET2
+        self.datas['TARGETC'] = self.datas.TARGET1 | self.datas.TARGET2 | self.datas.TARGET3
+       
         cote = datas[datas.RESULTAT == 1][['REFERENCE', 'COTE']]
         self.datas['COTE'] = (cote.set_index('REFERENCE'))
         self.datas['TARGET'] = self.datas.apply( lambda x: 1 if x['COTE'] > 8.8 else 0, axis=1)
-        #print(self.datas)
+        print(self.datas)
         #print(self.datas.describe())
-        #print(self.datas.TARGET.value_counts())
+        print(self.datas.TARGETA.value_counts())
+        print(self.datas.TARGETB.value_counts())
+        print(self.datas.TARGETC.value_counts())
 
     #----------------------------------------------------------------------------------------------
     def add_target(self, datas) :
