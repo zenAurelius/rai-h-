@@ -1,5 +1,3 @@
-
-from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
 
@@ -123,5 +121,6 @@ class HraiEvaluator:
 
 ###################################################################################################
 
+print(tf.__version__)
 ev = HraiEvaluator()
 ev.trainFromFile('./data/train.hrd', './data/train.prd')

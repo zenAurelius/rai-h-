@@ -1,4 +1,5 @@
 {
 	"python.linting.pylintEnabled": true,
-	"python.linting.enabled": true
+	"python.linting.enabled": true,
+	"python.pythonPath": "D:\\DevTools\\Miniconda\\envs\\tf1\\python.exe"
 }
