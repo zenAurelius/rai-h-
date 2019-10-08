@@ -30,6 +30,11 @@ class HraiEvaluator:
 	# TRAIN FROM FILE
 	###############################################################################################
 	def trainFromFile(self, filename, filetosave, modelname = None):
+		"""
+		Point d'entrée de la classe.
+		Charge le fichier, initialise le modèle, entraine le modèle. Enregistre une prédiction
+		sur les données d'entrainement.
+		"""
 		
 		# charger / traiter les données
 		self.loadFile(filename, True)
@@ -38,18 +43,18 @@ class HraiEvaluator:
 		# entrainer le modèle
 		features = self.dataset[self.features_names]
 		targets = self.dataset["TARGET"]
-		history = self.model.fit(
-			features, targets,
-			epochs=150)
+		history = self.model.fit( features, targets, epochs=20)
 
-		# enregistrer les prédictions
-		'''self.dataset["PREDICTION"] = pd.Series(self.predictions)'''
-		'''self.dataset.to_csv(filetosave)'''
-
-		features = self.original_dataset[self.features_names]
-		result =self.model.predict(features)
-		self.original_dataset["PREDICTION"] = pd.Series(result.flatten())
+		self.original_dataset["PREDICTION"] = self.eval(self.original_dataset[self.features_names])
 		self.original_dataset.to_csv(filetosave)
+	
+	###############################################################################################
+	# EVAL
+	###############################################################################################
+	def eval(self, test_data):
+		
+		test_predictions = self.model.predict(test_data).flatten()
+		return test_predictions
 	
 	###############################################################################################
 	# LOAD FILE
@@ -117,10 +122,24 @@ class HraiEvaluator:
 		#columns.add(dist_buc)
 		#columns.add(tf.feature_column.indicator_column(sx_column))
 
-		return columns	
+		return columns
+
+	###############################################################################################
+	# EVAL FROM FILE
+	###############################################################################################
+	def evalFromFile(self, filename, filetosave) :
+		
+		if self.model is None :
+			print("Le modèle n'a pas été entrainé...")
+			return
+		
+		self.loadFile(filename)
+		self.original_dataset["PREDICTION"] = self.eval(self.original_dataset[self.features_names])
+		self.original_dataset.to_csv(filetosave)
 
 ###################################################################################################
 
 print(tf.__version__)
 ev = HraiEvaluator()
 ev.trainFromFile('./data/train.hrd', './data/train.prd')
+ev.evalFromFile('./data/dev.hrd', './data/dev.prd')

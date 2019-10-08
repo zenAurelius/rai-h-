@@ -38,8 +38,10 @@ class md1_Concentrator:
 			#print(ref)
 			#print(course[["REFERENCE", "NUM_PARTICIPATION", "COTE"]])
 			if(len(course) != 16):
+				print('Erreur nbpartant sur ' + ref)
 				continue
 			if(course["RESULTAT_COURSE"].iloc[0] == 'Annulée') :
+				print('Erreur annulation sur ' + ref)
 				continue
 
 			reel_result = list(map(int, course["RESULTAT_COURSE"].iloc[0].split('-')))
