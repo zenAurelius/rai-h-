@@ -3,6 +3,7 @@ import numpy as np
 import datetime
 
 ###################################################################################################
+# Modele 2 : Trouver c rentable ie 1er n'est pas le fav, ni le sfav ni le tfav et autre combinaison
 ###################################################################################################
 class md2Preparator :
 
@@ -15,6 +16,8 @@ class md2Preparator :
     def load_data(self, filename) :
         print("LOADING DATA...")
         datas = pd.read_csv(filename, index_col='ID')
+        # il existe de partant à cote 0.0 => erreur ? en fait non partant ?, on les mets en fin de cote
+        datas['COTE'] = datas['COTE'].apply(lambda x : x if x > 0 else 100)
         print("LOADING DATA...done")
         print(datas.describe())
         return datas
@@ -40,22 +43,32 @@ class md2Preparator :
         print(datetime.datetime.now(), "- GROUPING RACE... done")
         print(datetime.datetime.now(), len(courses))
 
+        feature_named = ['DISTANCE', 'REUNION', 'PRIX', 'NUM_COURSE', 'NB_PARTANT']
         self.datas = pd.DataFrame(columns=['LIEUX'])
         self.datas.LIEUX = courses.first().LIEUX.apply(lambda x: self.lieux.index(x) / self.nb_lieux)
-        self.datas['NB_PARTANT'] = courses.first().NB_PARTANT
+        self.datas[feature_named] = courses.first()[feature_named]
         
-        fav = courses.apply(lambda x : self.extract_nth(x, 'COTE', 0))[['NUM_PARTICIPATION', 'RESULTAT', 'RESULTAT_COURSE']]
-        fav['TARGET'] = fav.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 2) else 0, axis=1)
-        self.datas[['FAV1', 'TARGET1']] = fav[['NUM_PARTICIPATION', 'TARGET']]
+        fav1 = courses.apply(lambda x : self.extract_nth(x, 'COTE', 0))[['NUM_PARTICIPATION', 'RESULTAT', 'RESULTAT_COURSE', 'COTE']]
+        fav1['TARGET'] = fav1.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] < 2) else 0, axis=1)
+        self.datas[['FAV1', 'TARGET1', 'COTE1']] = fav1[['NUM_PARTICIPATION', 'TARGET', 'COTE']]
         
-        sfav = courses.apply(lambda x : self.extract_nth(x, 'COTE', 1))[['NUM_PARTICIPATION', 'RESULTAT']]
-        sfav['TARGET'] = sfav.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 2) else 0, axis=1)
-        self.datas[['FAV2', 'TARGET2']] = sfav[['NUM_PARTICIPATION', 'TARGET']]
+        fav2 = courses.apply(lambda x : self.extract_nth(x, 'COTE', 1))[['NUM_PARTICIPATION', 'RESULTAT', 'COTE']]
+        fav2['TARGET'] = fav2.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] < 2) else 0, axis=1)
+        self.datas[['FAV2', 'TARGET2', 'COTE2']] = fav2[['NUM_PARTICIPATION', 'TARGET', 'COTE']]
 
-        tfav = courses.apply(lambda x : self.extract_nth(x, 'COTE', 2))[['NUM_PARTICIPATION', 'RESULTAT']]
-        tfav['TARGET'] = tfav.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] <= 2) else 0, axis=1)
-        self.datas[['FAV3', 'TARGET3']] = tfav[['NUM_PARTICIPATION', 'TARGET']]
+        fav3 = courses.apply(lambda x : self.extract_nth(x, 'COTE', 2))[['NUM_PARTICIPATION', 'RESULTAT', 'COTE']]
+        fav3['TARGET'] = fav3.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] < 2) else 0, axis=1)
+        self.datas[['FAV3', 'TARGET3', 'COTE3']] = fav3[['NUM_PARTICIPATION', 'TARGET', 'COTE']]
+
+        fav4 = courses.apply(lambda x : self.extract_nth(x, 'COTE', 3))[['NUM_PARTICIPATION', 'RESULTAT', 'COTE']]
+        fav4['TARGET'] = fav4.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] < 2) else 0, axis=1)
+        self.datas[['FAV4', 'TARGET4', 'COTE4']] = fav4[['NUM_PARTICIPATION', 'TARGET', 'COTE']]
+
+        fav5 = courses.apply(lambda x : self.extract_nth(x, 'COTE', 4))[['NUM_PARTICIPATION', 'RESULTAT', 'COTE']]
+        fav5['TARGET'] = fav5.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] < 2) else 0, axis=1)
+        self.datas[['FAV5', 'TARGET5', 'COTE5']] = fav5[['NUM_PARTICIPATION', 'TARGET', 'COTE']]
         
+        print(self.datas)
         #print(sfav)
         #print(pd.concat([self.datas, sfav], axis=1, sort=False))
 
@@ -63,14 +76,27 @@ class md2Preparator :
         self.datas['TARGETB'] = self.datas.TARGET1 | self.datas.TARGET2
         self.datas['TARGETC'] = self.datas.TARGET1 | self.datas.TARGET2 | self.datas.TARGET3
        
-        cote = datas[datas.RESULTAT == 1][['REFERENCE', 'COTE']]
-        self.datas['COTE'] = (cote.set_index('REFERENCE'))
-        self.datas['TARGET'] = self.datas.apply( lambda x: 1 if x['COTE'] > 8.8 else 0, axis=1)
+        gcote = datas[datas.RESULTAT == 1][['REFERENCE', 'COTE']]
+        self.datas['GCOTE'] = (gcote.set_index('REFERENCE'))
+        self.datas['TARGET'] = self.datas.apply( lambda x: 1 if x['GCOTE'] > 8.8 else 0, axis=1)
         print(self.datas)
         #print(self.datas.describe())
+
         print(self.datas.TARGETA.value_counts())
         print(self.datas.TARGETB.value_counts())
         print(self.datas.TARGETC.value_counts())
+
+        print(self.datas.TARGET1.value_counts())
+        print(self.datas.TARGET2.value_counts())
+        print(self.datas.TARGET3.value_counts())
+        print(self.datas.TARGET4.value_counts())
+        print(self.datas.TARGET5.value_counts())
+
+        print((self.datas['TARGET1'] * self.datas['COTE1']).sum())
+        print((self.datas['TARGET2'] * self.datas['COTE2']).sum())
+        print((self.datas['TARGET3'] * self.datas['COTE3']).sum())
+        print((self.datas['TARGET4'] * self.datas['COTE4']).sum())
+        print((self.datas['TARGET5'] * self.datas['COTE5']).sum())
 
     #----------------------------------------------------------------------------------------------
     def add_target(self, datas) :
@@ -85,7 +111,21 @@ class md2Preparator :
         self.extract_features(datas)
         #self.add_target(datas)
 
-        #self.save_data(trainset_file, devset_file)
+        self.save_data(trainset_file, devset_file)
+
+    #----------------------------------------------------------------------------------------------
+    def save_data(self, trainfile, devfile):
+
+        train_set = self.datas.sample(frac=0.75, random_state=0)
+        dev_set = self.datas.drop(train_set.index)
+
+        print("Train size = " + str(len(train_set.index)))
+        print(train_set.describe())
+        print("Dev size = " + str(len(dev_set.index)))
+        print(dev_set.describe())
+
+        train_set.to_csv(trainfile, index=False)
+        dev_set.to_csv(devfile, index=False)
 
 ###################################################################################################
 ###################################################################################################
