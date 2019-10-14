@@ -44,8 +44,17 @@ class md2Preparator :
         print(datetime.datetime.now(), len(courses))
 
         feature_named = ['DISTANCE', 'REUNION', 'PRIX', 'NUM_COURSE', 'NB_PARTANT']
+        cat_lieux = ['DEAUVILLE', 'PORNICHET LA BAULE', 'CHANTILLY', 'SAINT CLOUD', 'CAGNES SUR MER', 'MAISONS LAFFITTE']
         self.datas = pd.DataFrame(columns=['LIEUX'])
-        self.datas.LIEUX = courses.first().LIEUX.apply(lambda x: self.lieux.index(x) / self.nb_lieux)
+        #self.datas.LIEUX = courses.first().LIEUX.apply(lambda x: self.lieux.index(x) / self.nb_lieux)
+        print(courses.first().LIEUX.value_counts())
+        self.datas.LIEUX = courses.first().LIEUX.apply(lambda x: x if x in cat_lieux else 'AUTRE')
+        print(self.datas.LIEUX.value_counts())
+
+        nb_partant = courses.first().NB_PARTANT
+        self.datas['P_MAL'] = courses.apply(lambda x : x[x.SEXE_CHEVAL == 'M'].count() / x['NB_PARTANT'].iloc[0]).iloc[:,0]
+        self.datas['P_FEM'] = courses.apply(lambda x : x[x.SEXE_CHEVAL == 'F'].count() / x['NB_PARTANT'].iloc[0]).iloc[:,0]
+        
         self.datas[feature_named] = courses.first()[feature_named]
         
         fav1 = courses.apply(lambda x : self.extract_nth(x, 'COTE', 0))[['NUM_PARTICIPATION', 'RESULTAT', 'RESULTAT_COURSE', 'COTE']]
