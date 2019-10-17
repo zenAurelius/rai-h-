@@ -2,15 +2,19 @@ import pandas as pd
 import numpy as np
 import datetime
 
+import md_utility
+
 ###############################################################################
 class md1Preparator :
 
+	#----------------------------------------------------------------------------------------------
 	def load_data(self, filename) :
 		print("LOADING DATA...")
 		datas = pd.read_csv(filename)
 		print(datas.describe())
 		return datas
 		
+	#----------------------------------------------------------------------------------------------
 	def orderedValue(self, row, courses, col_names) :	
 		to_return = []
 		for col_name in col_names :
@@ -21,47 +25,55 @@ class md1Preparator :
 			to_return.append(val)
 		return to_return
 
+	#----------------------------------------------------------------------------------------------
+	def extract_course_datas(self, course) :
+		cat_lieux = ['DEAUVILLE', 'PORNICHET LA BAULE', 'CHANTILLY', 'SAINT CLOUD', 'CAGNES SUR MER', 'MAISONS LAFFITTE']
+		first_course = course.iloc[0]
+
+		datas = pd.DataFrame()
+		datas['LIEUX'] = course.LIEUX.apply(lambda l : l if l in cat_lieux else 'AUTRE')
+		datas['P_MAL'] = len(course[course.SEXE_CHEVAL == 'M']) / first_course.NB_PARTANT
+		datas['P_FEM'] = len(course[course.SEXE_CHEVAL == 'F']) / first_course.NB_PARTANT
+		datas['R_HEURE'] = first_course.HEURE[:2]
+		datas['M_POIDS'] = course.POIDS.mean()
+		datas['S_POIDS'] = course.POIDS.std()
+		datas['M_AGE_CHEVAL'] = course.AGE_CHEVAL.mean()
+		datas['S_AGE_CHEVAL'] = course.AGE_CHEVAL.std()
+		datas['M_HANDICAP'] = course.HANDICAP.mean()
+		datas['S_HANDICAP'] = course.HANDICAP.std()
+		datas['SEASON'] = md_utility.convert_season(first_course.DATE_COURSE[5:7])
+
+		# ordered features :
+		of_names = ['POIDS', 'CORDE', 'NUM_PARTICIPATION', 'HANDICAP', 'AGE_CHEVAL']	
+		for of in of_names :
+			min_of = course[of].min()
+			max_of = course[of].max()
+			datas['O_' + of] = ((course[of] - min_of) / (max_of - min_of)).fillna(0)
+
+		return datas
+
+	#----------------------------------------------------------------------------------------------
 	def extract_features(self, datas) :
 
-		print('EXTRACT INFORMATION DATA...') #-----------------------------------------------------
-		self.dataset = datas[['NUM_PARTICIPATION', 'RESULTAT_COURSE']]
+		print(datetime.datetime.now(), '- EXTRACT RAW DATA...') #-----------------------------------------------------
+		self.dataset = datas[['NUM_PARTICIPATION', 'RESULTAT_COURSE', 'DISTANCE', 'PRIX', 'SEXE_CHEVAL']]
+		print(self.dataset)
 
-		print('EXTRACT CATEGORICAL FEATURES...') #-------------------------------------------------
-		self.dataset[['LIEUX', 'DISTANCE', 'PRIX', 'SEXE_CHEVAL', 'SEASON']] = datas[['LIEUX', 'DISTANCE', 'PRIX', 'SEXE_CHEVAL', 'SEASON']].copy()
-		self.dataset.loc[:,'OEILLERE'] = datas['OEILLERE'].notna().astype(float)
-		self.dataset.loc[:,'SEXE_CHEVAL'] = datas.SEXE_CHEVAL.apply(lambda x : self.encodeSexe(x))
-
-		print('REFERENCE...') #--------------------------------------------------------------------
-		self.dataset.loc[:,'REFERENCE'] = datas.REFERENCE
+		print(datetime.datetime.now(), '- EXTRACT DECODE PARTICIPATION FEATURES...') #-------------------------------------------------
+		self.dataset['OEILLERE'] = datas['OEILLERE'].notna().astype(float)
 		
-		print('GROUPING...') #---------------------------------------------------------------------
-		print(datetime.datetime.now())
+		print(datetime.datetime.now(), '- GROUPING...') #---------------------------------------------------------------------
 		courses = datas.groupby('REFERENCE')
-		print(len(courses))
-		print(datetime.datetime.now())
-		col_names = ['NUM_PARTICIPATION', 'POIDS', 'CORDE', 'COTE']	
-		ord_df = pd.DataFrame()
-		for _, (u, rows) in enumerate(courses) :
-			min = rows[col_names].min()
-			max = rows[col_names].max()
-			ord_df = ord_df.append(((rows[col_names] - min) / (max - min)).fillna(0))
+		print(datetime.datetime.now(), '- NB COURSES = ', len(courses))
+		print(datetime.datetime.now(), '- EXTRACT COURSE FEATURES = ', len(courses))
+		self.dataset = pd.concat([self.dataset, courses.apply(lambda c : self.extract_course_datas(c)).reset_index(level=0)], axis=1)
+		print(datetime.datetime.now(), '- COURSES FEATURES : ')
+		print(self.dataset)
+				
+		print(datetime.datetime.now(), '- EXTRACT STANDARDIZE FEATURES...') #-------------------------------------------------
+		print(datas[['AGE_CHEVAL', 'HANDICAP']].describe())
 
-		print(datetime.datetime.now())
-		self.dataset[['NUM_0', 'POIDS_O', 'CORDE_O', 'COTE_O']] = ord_df
-		print(datetime.datetime.now())
-		print(self.dataset[['NUM_0', 'POIDS_O', 'CORDE_O', 'COTE_O']].describe())
-		
-		print('EXTRACT STANDARDIZE FEATURES...') #-------------------------------------------------
-		self.dataset.loc[:,'TX_HIT_CO'] = ((datas['TX_HIT_CO'] - 0.085059) / 0.040525)
-		self.dataset.loc[:,'LAST_WIN_CO'] = ((datas['LAST_WIN_CO'] - 21.502638) / 26.591206)
-		self.dataset.loc[:,'NB_CO_DAY'] = ((datas['NB_CO_DAY'] - 3.455960) / 1.966135)
-		self.dataset.loc[:,'NUM_CO_DAY'] = ((datas['NUM_CO_DAY'] - 2.244351) / 1.488554)
-		self.dataset.loc[:,'HANDICAP'] = ((datas['HANDICAP'] - 2.816466) / 2.527261)
-		self.dataset.loc[:,'AGE_CHEVAL'] = (((datas['AGE_CHEVAL'] - 1) / 4) - 1)
-		print(datas[['NUM_CO_DAY', 'NB_CO_DAY', 'LAST_WIN_CO', 'TX_HIT_CO', 'HANDICAP', 'AGE_CHEVAL']].describe())
-		print(self.dataset[['NUM_CO_DAY', 'NB_CO_DAY', 'LAST_WIN_CO', 'TX_HIT_CO', 'HANDICAP', 'AGE_CHEVAL']].describe())
-
-	#**********************************************************************************************
+	#----------------------------------------------------------------------------------------------
 	def add_target(self, datas)	:
 		# ajoute les rapports 
 		self.dataset[['RPT_COUPLE', 'RPT_TRIO', 'RPT_TIERCEO', 'RPT_TIERCED', 'RPT_QUARTEO', 'RPT_QUARTED', 'RPT_QUINTEO', 'RPT_QUINTED']] = datas[['RPT_COUPLE', 'RPT_TRIO', 'RPT_TIERCEO', 'RPT_TIERCED', 'RPT_QUARTEO', 'RPT_QUARTED', 'RPT_QUINTEO', 'RPT_QUINTED']]
@@ -69,32 +81,22 @@ class md1Preparator :
 		self.dataset['COTE'] = datas['COTE']
 		print(self.dataset[['RPT_COUPLE', 'RPT_TRIO', 'RPT_TIERCEO', 'RPT_TIERCED', 'RPT_QUARTEO', 'RPT_QUARTED', 'RPT_QUINTEO', 'RPT_QUINTED', 'TARGET']].describe())
 
+	#----------------------------------------------------------------------------------------------
 	def convertResultat(self, row) :
 		if row["RESULTAT"] == 1 :
 			return 1.0
-		elif row["RESULTAT"] == 2 : 
-			return 0.5
-		elif row["RESULTAT"] == 3 : 
-			return 0.25
-		elif row["RESULTAT"] == 4 : 
-			return 0.125
-		elif row["RESULTAT"] == 5 : 
-			return 0.06
-		else :
-			return 0.0	
-
-	def encodeSexe(self, row):
-		if(row == 'F') : 
+		if row["RESULTAT"] == 2 : 
 			return 1.0
-		if(row == 'H') :
-			return 0.5
-		if(row == 'M') :
+		if row["RESULTAT"] == 3 : 
+			return 1.0
+		if row["RESULTAT"] == 4 : 
 			return 0.0
-		return 0.5
+		if row["RESULTAT"] == 5 : 
+			return 0.0
+		return 0.0	
 
+	#----------------------------------------------------------------------------------------------
 	def save_data(self, trainfile, devfile):
-
-
 		train_set = pd.DataFrame()
 		dev_set = pd.DataFrame()
 		#groupe par reference
@@ -115,14 +117,27 @@ class md1Preparator :
 		print(train_set.describe())
 		print("Dev size = " + str(dev_size))
 		print(dev_set.describe())
+
+		# balancing train set :
+		print('balancing...')
+		counts = train_set["TARGET"].value_counts()
+		print('counts before :\n',counts)
+		df_loss = train_set[train_set["TARGET"] == 0]
+		df_win = train_set[train_set["TARGET"] != 0]
+		df_loss = df_loss.sample(counts.iloc[1])
+		train_set = pd.concat([df_loss, df_win], axis=0)
+		counts = train_set["TARGET"].value_counts()
+		print('counts after : \n',counts)
+
 		
 		train_set.to_csv(trainfile, index=False)
 		dev_set.to_csv(devfile, index=False)
-		
 
+	#----------------------------------------------------------------------------------------------
 	def prepare_training(self, filename, trainset_file, devset_file):
 		self.parameters = pd.DataFrame()
 		self.devPercentage = 30
+		
 		datas = self.load_data(filename)
 		self.extract_features(datas)
 		self.add_target(datas)

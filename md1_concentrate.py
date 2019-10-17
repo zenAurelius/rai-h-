@@ -36,7 +36,7 @@ class md1_Concentrator:
 		courses = self.data.groupby('REFERENCE')
 		for ref, course in courses:
 			#print(ref)
-			#print(course[["REFERENCE", "NUM_PARTICIPATION", "COTE"]])
+			#print(course[["REFERENCE", "NUM_PARTICIPATION", "COTE", "RESULTAT_COURSE"]])
 			if(len(course) != 16):
 				print('Erreur nbpartant sur ' + ref)
 				continue
@@ -126,5 +126,5 @@ class md1_Concentrator:
 	
 
 ct = md1_Concentrator()
-ct.concentrate('./data/train.prd', './data/train.ctr', '')
+#ct.concentrate('./data/train.prd', './data/train.ctr', '')
 ct.concentrate('./data/dev.prd', './data/dev.ctr', '')

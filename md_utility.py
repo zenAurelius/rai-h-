@@ -1,6 +1,6 @@
-import pandas as pd
 
-def convertSeason(x) :
+#----------------------------------------------------------------------------------------------
+def convert_season(x) :
     if x in ['12', '01', '02'] :
         return 0
     if x in ['03', '04', '05'] :
@@ -11,8 +11,3 @@ def convertSeason(x) :
         return 3
     return 4 
 
-datas = pd.read_csv("./data/train2.hrd")
-print(datas.describe())
-
-print(datas[['DATE_COURSE', 'SEASON']])
-print(datas.SEASON.value_counts())

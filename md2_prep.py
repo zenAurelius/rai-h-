@@ -36,6 +36,41 @@ class md2Preparator :
         return list_pos
 
     #----------------------------------------------------------------------------------------------
+    def convertSeason(self, x) :
+        if x in ['12', '01', '02'] :
+            return 0
+        if x in ['03', '04', '05'] :
+            return 1
+        if x in ['06', '07', '08'] :
+            return 2
+        if x in ['09', '10', '11'] :
+            return 3
+        return 4 
+
+    #----------------------------------------------------------------------------------------------
+    def extractDatas(self, course) :
+        cat_lieux = ['DEAUVILLE', 'PORNICHET LA BAULE', 'CHANTILLY', 'SAINT CLOUD', 'CAGNES SUR MER', 'MAISONS LAFFITTE']
+        first_course = course.iloc[0]
+        favoris = course[course.COTE < 8]
+        
+        datas = pd.DataFrame()
+        datas['LIEUX'] = pd.Series(first_course.LIEUX if first_course.LIEUX in cat_lieux else 'AUTRE')
+        datas['P_MAL'] = len(course[course.SEXE_CHEVAL == 'M']) / first_course.NB_PARTANT
+        datas['P_FEM'] = len(course[course.SEXE_CHEVAL == 'F']) / first_course.NB_PARTANT
+        datas['R_HEURE'] = first_course.HEURE[:2]
+        datas['M_POIDS'] = course.POIDS.mean()
+        datas['S_POIDS'] = course.POIDS.std()
+        datas['M_AGE_CHEVAL'] = course.AGE_CHEVAL.mean()
+        datas['S_AGE_CHEVAL'] = course.AGE_CHEVAL.std()
+        datas['FM_POIDS'] = favoris.POIDS.mean()
+        datas['FM_AGE_CHEVAL'] = favoris.AGE_CHEVAL.mean()
+        datas['FP_MAL'] = len(favoris[favoris.SEXE_CHEVAL == 'M']) / len(favoris)
+        datas['FP_FEM'] = len(favoris[favoris.SEXE_CHEVAL == 'F']) / len(favoris)
+        datas['SEASON'] = self.convertSeason(first_course.DATE_COURSE[5:7])
+
+        return datas
+        
+    #----------------------------------------------------------------------------------------------
     def extract_features(self, datas) :
         # un enregistrement par course
         print(datetime.datetime.now(), "- GROUPING RACE...")
@@ -43,19 +78,15 @@ class md2Preparator :
         print(datetime.datetime.now(), "- GROUPING RACE... done")
         print(datetime.datetime.now(), len(courses))
 
-        feature_named = ['DISTANCE', 'REUNION', 'PRIX', 'NUM_COURSE', 'NB_PARTANT']
-        cat_lieux = ['DEAUVILLE', 'PORNICHET LA BAULE', 'CHANTILLY', 'SAINT CLOUD', 'CAGNES SUR MER', 'MAISONS LAFFITTE']
-        self.datas = pd.DataFrame(columns=['LIEUX'])
-        #self.datas.LIEUX = courses.first().LIEUX.apply(lambda x: self.lieux.index(x) / self.nb_lieux)
-        print(courses.first().LIEUX.value_counts())
-        self.datas.LIEUX = courses.first().LIEUX.apply(lambda x: x if x in cat_lieux else 'AUTRE')
-        print(self.datas.LIEUX.value_counts())
-
-        nb_partant = courses.first().NB_PARTANT
-        self.datas['P_MAL'] = courses.apply(lambda x : x[x.SEXE_CHEVAL == 'M'].count() / x['NB_PARTANT'].iloc[0]).iloc[:,0]
-        self.datas['P_FEM'] = courses.apply(lambda x : x[x.SEXE_CHEVAL == 'F'].count() / x['NB_PARTANT'].iloc[0]).iloc[:,0]
-        
+        print(datas.iloc[0].index)
+        self.datas = pd.DataFrame()
+        feature_named = ['DISTANCE', 'REUNION', 'PRIX', 'NUM_COURSE', 'NB_PARTANT', 'DATE_COURSE', 'HEURE']
         self.datas[feature_named] = courses.first()[feature_named]
+
+        course_datas = courses.apply(lambda x : self.extractDatas(x))
+        course_datas = course_datas.reset_index(level=1, drop=True)
+        self.datas = pd.concat([self.datas, course_datas], axis=1)
+        print(self.datas)
         
         fav1 = courses.apply(lambda x : self.extract_nth(x, 'COTE', 0))[['NUM_PARTICIPATION', 'RESULTAT', 'RESULTAT_COURSE', 'COTE']]
         fav1['TARGET'] = fav1.apply(lambda x: 1 if (x['RESULTAT'] >= 1 and x['RESULTAT'] < 2) else 0, axis=1)
