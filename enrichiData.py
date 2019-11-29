@@ -7,6 +7,14 @@ import datetime
 class Enrichisseur:
 
 
+	def cor_ref(self, c) :
+		ref = c.REFERENCE
+		id_nc = c.REFERENCE.find('C') + 1
+		if len(ref[id_nc:]) == 1 :
+			ref = ref[:id_nc] + '0' + ref[id_nc:]
+		
+		return ref
+		
 	def enr_co_1(self, group, row) :
 		print(self.nbT, end='\r')
 		self.nbT += 1
@@ -17,6 +25,36 @@ class Enrichisseur:
 		if(len(idx) > 0) :
 			num_co_day = idx[0] + 1
 		return [num_co_day, nb_co_day]
+
+	def enr_co_p(self, pa, gr) :
+		pastOfCo = gr[gr.REFERENCE < pa.REFERENCE]
+		wins = np.flatnonzero(pastOfCo['RESULTAT'] == 1)
+		last_win_co = 100
+		tx_hit_co = 0
+		if(len(wins) > 0) :
+			last_win_co = len(pastOfCo) - wins[-1]
+		if(len(pastOfCo)) :
+			tx_hit_co = len(wins) / len(pastOfCo)
+		
+		#print(pastOfCo['RESULTAT'] == 1)
+		'''if(false) :
+			print(pastOfCo.REFERENCE)
+			print(pa[['REFERENCE', 'RESULTAT']])
+			print(pastOfCo['RESULTAT'] == 1)
+			print(wins)
+			print(last_win_co)
+			print(tx_hit_co)
+			print(len(pastOfCo))'''
+		return pd.Series([last_win_co, tx_hit_co], index=['CO_LAST_WIN', 'CO_TX_HIT'])
+
+	def enr_co(self, gr) :
+		self.nbT += 1
+		print('-- GROUPE --', self.nbT, end='\r')
+		#print(gr.REFERENCE)
+		gr = gr.sort_values('REFERENCE', ascending=True)
+		cols = gr.apply(lambda pa : self.enr_co_p(pa, gr), axis=1)#,result_type='expand')
+		#print(cols)
+		return cols
 		
 	def enr_co_0(self, group, row) :
 		print(self.nbT, end='\r')
@@ -87,9 +125,13 @@ class Enrichisseur:
 		#self.df = full[full.TYPE_COURSE == 'p']
 		#self.df.to_csv('./data/plat.csv', index=False)
 		
-		self.df = pd.read_csv('./data/plat.csv')
+		self.df = pd.read_csv('./data/plat.csv', index_col='ID')
+		#self.df = self.df.head(1000)
 		print(len(self.df))
-				
+		print(self.df.describe())
+		print(self.df.tail())
+
+						
 		''' # ENRICHISSEMENT DE SEASON
 		self.df['SEASON'] = pd.Series(self.df.DATE_COURSE.str.split('-', expand=True)[1], dtype='int64').mod(12).floordiv(3)
 		print(self.df['SEASON'].describe())
@@ -104,23 +146,21 @@ class Enrichisseur:
 		'''
 		
 		# 0
-		'''
+		
 		print(datetime.datetime.now())
 		r = []
 		dfs = []
-		coco = self.df.groupby('CONDUCTEUR')
 		self.nbT = 0
-		for i, (u, r_co) in enumerate(coco) :
-			# 1
-			col = r_co.apply(lambda x : self.enr_co_0(r_co, x), axis=1, result_type='expand')
-			r.append(r_co.assign(LAST_WIN_CO = col.iloc[:,0], TX_HIT_CO = col.iloc[:,1]))
-			if(i%1000 == 0):
-				dfs.append(pd.concat(r))
-				r = []
-		if len(r) > 0 :
-			dfs.append(pd.concat(r))		
-		self.df = pd.concat(dfs)
-		'''
+		by_co = self.df.groupby('CONDUCTEUR')
+		print(len(by_co))
+		self.df = pd.concat([self.df, by_co.apply(lambda gr : self.enr_co(gr)).reset_index(level=0)], axis=1)
+
+		print(datetime.datetime.now())
+		print(self.df)
+
+		'''self.df['REFERENCE'] = self.df.apply(lambda c : self.cor_ref(c), axis=1)
+		print(self.df.REFERENCE)'''
+		
 
 		# 1 
 		'''
@@ -165,7 +205,7 @@ class Enrichisseur:
 		
 		'''
 		print(datetime.datetime.now())	
-		self.df.to_csv('./data/plat_enr2.csv', index=False)
+		self.df.to_csv('./data/plat_enr2.csv')
 		
 		
 		''' # ENRICHISSEMENT CO SUR 2017_16
