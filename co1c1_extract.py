@@ -71,10 +71,12 @@ class co1c1Extract(hraiExtract) :
     def traite_course(self, course) :
         print("course")
         arrives = course[course.RESULTAT > 0]
-        print(arrives)
-        result = arrives.apply(lambda p : self.extract_1c1(p, course[course.NUM_PARTICIPATION != p.NUM_PARTICIPATION]), axis=1)
-        print(result)
-        return result
+        for i in range(len(arrives)) :
+            print(arrives.iloc[i])
+        #print(arrives)
+        #result = arrives.apply(lambda p : self.extract_1c1(p, course[course.NUM_PARTICIPATION != p.NUM_PARTICIPATION]), axis=1)
+        #print(result)
+        #return resultco
 
     #----------------------------------------------------------------------------------------------
     def split_features(self, courses) :
@@ -85,7 +87,7 @@ class co1c1Extract(hraiExtract) :
         
         courses.apply(lambda c : self.traite_course(c))
         
-        [self.traite_course(i, g[1]) for i,g in enumerate(list(courses)[:dev_size])]
+        #[self.traite_course(i, g[1]) for i,g in enumerate(list(courses)[:dev_size])]
         #train_list = [g[1] for g in list(courses)[dev_size:]]
         #dev_set = pd.concat(dev_list)
         #train_set = pd.concat(train_list)
