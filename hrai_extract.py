@@ -18,8 +18,10 @@ class hraiExtract :
         datas = pd.read_csv(filename, index_col='ID')
         # il existe de partant à cote 0.0 => erreur ? en fait non partant ?, on les mets en fin de cote
         datas['COTE'] = datas['COTE'].apply(lambda x : x if x > 0 else 100)
+        # on ne garde que les courses qui sont dans les lieux
+        datas = datas[datas.LIEUX.isin(self.lieux)]
         print("LOADING DATA...done")
-        print(datas.describe())
+        print(len(datas))
         return datas
 
     #----------------------------------------------------------------------------------------------
