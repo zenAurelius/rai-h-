@@ -12,13 +12,11 @@ class co1c1Extract(hraiExtract) :
     #----------------------------------------------------------------------------------------------
     def __init__(self) :
         super().__init__()
-        self.cr_data = ['REFERENCE','RESULTAT','RESULTAT_COURSE','NUM_PARTICIPATION']
-        self.cr_features = ['LIEUX','REUNION','DISTANCE','PRIX','NB_PARTANT','HEURE','NUM_COURSE','SEASON','P_MAL','P_FEM','M_POIDS','S_POIDS','M_AGE_CHEVAL','S_AGE_CHEVAL']
+        self.cr_data = ['RESULTAT','RESULTAT_COURSE','NUM_PARTICIPATION']
+        self.cr_features = ['REFERENCE','LIEUX','REUNION','DISTANCE','PRIX','NB_PARTANT','HEURE','NUM_COURSE','SEASON','P_MAL','P_FEM','M_POIDS','S_POIDS','M_AGE_CHEVAL','S_AGE_CHEVAL']
         self.ch_features = ['SEXE_CHEVAL','AGE_CHEVAL','POIDS','CORDE','HANDICAP']
         self.co_features = ['CO_LAST_WIN','CO_TX_HIT','CO_KNOWN_CR','CO_NB_INDAY','CO_NUM_INDAY']
         self.all_features = self.cr_features + self.ch_features + self.co_features
-        self.p1_features = [f + '_P1' for f in (self.ch_features + self.co_features)]
-        self.p2_features = [f + '_P2' for f in (self.ch_features + self.co_features)]
 
     #----------------------------------------------------------------------------------------------
     def extract_nth(self, x, col_name, pos) :
@@ -46,53 +44,45 @@ class co1c1Extract(hraiExtract) :
         return features
 
     #----------------------------------------------------------------------------------------------
-    def add_comparaison(self, p, o) :
-        new_data = []
-        for f in (self.co_features + self.ch_features) :
-            new_data.add(p[f])
-            #new_data[f +'_P2'] = o[f]
-        #for f in self.cr_features :
-        #    new_data[f] = p[f]'''
-        if p.RESULTAT != 0 and (o.RESULTAT == 0 or (p.RESULTAT < o.RESULTAT)) :
-            new_data.add(1)
-        else :
-            new_data.add(0)
-        #print(p.RESULTAT, o.RESULTAT, new_data.TARGET)
+    def extract_1c1(self, p, o) :
+        #print(p)
+        p1 = pd.Series(p[self.all_features]).rename(lambda i : i + '_P1')
+        p2 = pd.Series(o[self.all_features]).rename(lambda i : i + '_P2')
+        new_data = pd.concat([p1,p2])
+        new_data['TARGET'] = p.RESULTAT != 0 and (o.RESULTAT == 0 or (p.RESULTAT < o.RESULTAT))
+        #print(new_data)
         return new_data
 
     #----------------------------------------------------------------------------------------------
-    def extract_1c1(self, p, others) :
-        df1 = others.apply(lambda o : self.add_comparaison(p,o), axis=1)
-        #df2 = others.apply(lambda o : self.add_comparaison(o,p), axis=1)
-        #self.dev_set = pd.concat([self.dev_set, df1, df2])
-        return df1
-
-    #----------------------------------------------------------------------------------------------
-    def traite_course(self, course) :
-        print("course")
+    def traite_course(self, course, dev_size) :
+        print(datetime.datetime.now(), 'c', self.nbC, end='\r')
+        print(course)
+        self.nbC += 1
         arrives = course[course.RESULTAT > 0]
+        result = []
         for i in range(len(arrives)) :
-            print(arrives.iloc[i])
-        #print(arrives)
-        #result = arrives.apply(lambda p : self.extract_1c1(p, course[course.NUM_PARTICIPATION != p.NUM_PARTICIPATION]), axis=1)
-        #print(result)
-        #return resultco
+            a = arrives.iloc[i]
+            others = course[course.NUM_PARTICIPATION != a.NUM_PARTICIPATION]
+            result.append(others.apply(lambda o : self.extract_1c1(a, o), axis=1))
+            result.append(others.apply(lambda o : self.extract_1c1(o, a), axis=1))
+        full1 = pd.concat(result)
+        print(full1)
+        if self.nbC < dev_size :
+            self.dev_list.append(full1)
+        else :
+            self.train_list.append(full1)
 
     #----------------------------------------------------------------------------------------------
     def split_features(self, courses) :
-        self.dev_set = pd.DataFrame()
+        self.dev_list = []
+        self.train_list = []
         full_size = len(courses)
         dev_size = int(self.dev_percentage * full_size / 100)
         print('sizes : ', full_size, dev_size)
-        
-        courses.apply(lambda c : self.traite_course(c))
-        
-        #[self.traite_course(i, g[1]) for i,g in enumerate(list(courses)[:dev_size])]
-        #train_list = [g[1] for g in list(courses)[dev_size:]]
-        #dev_set = pd.concat(dev_list)
-        #train_set = pd.concat(train_list)
-        print(self.dev_set)
-        #print(train_set.describe())
+        self.nbC = 0
+        courses.apply(lambda c : self.traite_course(c, dev_size))
+        self.dev_set = pd.concat(self.dev_list)
+        self.train_set = pd.concat(self.train_list)
 
     #----------------------------------------------------------------------------------------------
     def add_target(self, datas) :
@@ -102,7 +92,7 @@ class co1c1Extract(hraiExtract) :
     #----------------------------------------------------------------------------------------------
     def prepare_training(self, filename, trainset_file, devset_file):
         self.parameters = pd.DataFrame()
-        self.dev_percentage = 3
+        self.dev_percentage = 30
 
         datas = super().load_data(filename)
         datas = datas[(datas.DATE_COURSE > '2013-12-31') & (datas.DATE_COURSE < '2016-12-31')]
@@ -111,9 +101,11 @@ class co1c1Extract(hraiExtract) :
         # sélection des features parmi les données
         features = self.extract_features(datas)
         
+        #features.to_csv('./data/filtered_features.csv')
         # traitement par course : groupe, split, transforme en 1c1
         print('- group by REFERENCE...')
         features = features.reindex(np.random.permutation(features.index)).reset_index(drop=True)
+        print(features.head())
         courses = features.groupby('REFERENCE', sort=False)
         print('- group by REFERENCE...done : ', len(courses))
         
@@ -123,16 +115,13 @@ class co1c1Extract(hraiExtract) :
     #----------------------------------------------------------------------------------------------
     def save_data(self, trainfile, devfile):
 
-        train_set = self.datas.sample(frac=0.75, random_state=0)
-        dev_set = self.datas.drop(train_set.index)
+        print("Train size = " + str(len(self.train_set.index)))
+        print(self.train_set.describe())
+        print("Dev size = " + str(len(self.dev_set.index)))
+        print(self.dev_set.describe())
 
-        print("Train size = " + str(len(train_set.index)))
-        print(train_set.describe())
-        print("Dev size = " + str(len(dev_set.index)))
-        print(dev_set.describe())
-
-        train_set.to_csv(trainfile, index=False)
-        dev_set.to_csv(devfile, index=False)
+        self.train_set.to_csv(trainfile)
+        self.dev_set.to_csv(devfile)
 
 ###################################################################################################
 ###################################################################################################
