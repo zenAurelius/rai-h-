@@ -62,7 +62,9 @@ PROCESS PROGRAMME DATA :
 def process_programme_data(programme, date):
     for reunion in programme["reunions"]:
         flatraces = []
-        flatmeteo = flatdict.FlatDict({'cr':reunion["meteo"]}, delimiter="_")
+        flatmeteo = {}
+        if "meteo" in reunion :
+            flatmeteo = flatdict.FlatDict({'cr':reunion["meteo"]}, delimiter="_")
         for course in reunion["courses"]:
             if course["discipline"] == 'ATTELE' :
                 cf = flatdict.FlatDict({'cr':course}, delimiter="_")
