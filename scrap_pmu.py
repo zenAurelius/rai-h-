@@ -27,11 +27,11 @@ def get_race_data(date):
     GET PARTICIPANTS DATA
 '''
 def get_participants_data(course, date):
-    url = f"https://online.turfinfo.api.pmu.fr/rest/client/61/programme/{date}/R{course['numReunion']}/C{course['numOrdre']}/participants?specialisation=INTERNET"
+    url = f"https://online.turfinfo.api.pmu.fr/rest/client/61/programme/{date}/R{course['cr_numReunion']}/C{course['cr_numOrdre']}/participants?specialisation=INTERNET"
     response = requests.get(url)
 
     if response.status_code == 200:
-        data = json.loads(response.content)["programme"]
+        data = json.loads(response.content)["participants"]
         return data
     else:
         print(f"Error fetching data for date {date}: {response.status_code}")
@@ -41,28 +41,41 @@ def get_participants_data(course, date):
 PROCESS PARTICIPANTS DATA
 '''
 def process_participants_data(race, participants):
+    flatted = []
     for p in participants:
-        pf = flatdict.FlatDict(p, delimiter="_")
-        for kr, vr in race.items():
-            if 'cr_' + kr not in datas:
-                datas['cr_' + kr] = []
-            datas['cr_' + kr].append(vr)
+        pf = flatdict.FlatDict({'ch':p}, delimiter="_")
+        flatted.append(pf)
+        n = len(list(datas.items())[0][1])
         for kc, vc in pf.items():
-            if 'ch_' + kc not in datas:
-                datas['ch_' + kc] = []
-            datas['ch_' + kc].append(pf)
+            if kc not in datas:
+                datas[kc] = [None for i in range(n)]
+    for p in flatted :
+        for k,v in datas.items():
+            if k.startswith('cr_'):
+               v.append(race.get(k, None)) 
+            if k.startswith('ch_'):
+                v.append(p.get(k, None))
 
 '''
 PROCESS PROGRAMME DATA :
 '''   
 def process_programme_data(programme, date):
     for reunion in programme["reunions"]:
+        flatraces = []
+        flatmeteo = flatdict.FlatDict({'cr':reunion["meteo"]}, delimiter="_")
         for course in reunion["courses"]:
             if course["discipline"] == 'ATTELE' :
-                cf = flatdict.FlatDict(course, delimiter="_")
-                participants = get_participants_data(course, date)
-                if participants:
-                    process_participants_data(cf, participants)
+                cf = flatdict.FlatDict({'cr':course}, delimiter="_")
+                cf = dict(cf, **flatmeteo);
+                flatraces.append(cf)
+                for kr, vr in cf.items():
+                    if kr not in datas:
+                        datas[kr] = []
+
+        for c in flatraces:
+            participants = get_participants_data(c, date)
+            if participants:
+                process_participants_data(c, participants)
                 
 
 def daterange(start_date, end_date):
