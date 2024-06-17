@@ -37,7 +37,7 @@ def clean(df):
 
 # calculer une reference de course
 # Chemin vers le fichier CSV (dans un répertoire nommé "data")
-filename = 'pmu2014_1'
+filename = 'pmu2014s'
 
 # Charger le fichier CSV dans un DataFrame
 df = pd.read_csv(f'./data/{filename}.csv')
@@ -46,7 +46,7 @@ df = clean(df)
 
 # les différentes colonnes qu'on veut garder, reparties dans des colonnes liées à la course, à la participation ou au calcul du target
 cr_col = ['aid_cr', 'cr_libelleCourt']
-ch_col = ['ch_nom', 'ch_numPmu']
+ch_col = ['ch_nom', 'ch_numPmu', 'ch_dernierRapportReference_rapport']
 tg_col = ['ch_ordreArrivee']
 all_col = cr_col + ch_col + tg_col
 df = df[all_col]
@@ -56,4 +56,4 @@ r = un_vs_un(df)
 elapsed_time = time.time() - start_time
 print(f"Elapsed time: {elapsed_time:.2f} seconds")
 
-r.to_csv('test.csv', index=False)
+r.to_csv(f'./data/{filename}_c.csv', index=False)
