@@ -70,9 +70,13 @@ def process_programme_data(programme, date):
                 cf = flatdict.FlatDict({'cr':course}, delimiter="_")
                 cf = dict(cf, **flatmeteo);
                 flatraces.append(cf)
+                if datas :
+                    n = len(list(datas.items())[0][1])
+                else:
+                    n=0
                 for kr, vr in cf.items():
                     if kr not in datas:
-                        datas[kr] = []
+                        datas[kr] = [None for i in range(n)]
 
         for c in flatraces:
             participants = get_participants_data(c, date)
@@ -93,7 +97,7 @@ end_date = datetime(2015, 1, 1)
 filename = 'pmu2014'
 
 datas = {}
-chunk = 3
+chunk = 100
 c_chunk = 0
 n_chunk = 0
 
@@ -106,6 +110,8 @@ for date in daterange(start_date, end_date):
         process_programme_data(race_data, date_str)
     if c_chunk > chunk and datas :
         n_chunk += 1
+        for k,v in datas.items():
+            print(k + ' : ' + str(len(v)))
         df = pd.DataFrame(datas)
         df.to_csv(f'./data/{filename}_{n_chunk}.csv', index=False)
         datas = {}
@@ -114,6 +120,12 @@ for date in daterange(start_date, end_date):
 
 
 df = pd.DataFrame(datas)
-df.to_csv(f'./data/{filename}_{n_chunk}.csv', index=False)
+df.to_csv(f'./data/{filename}_{n_chunk+1}.csv', index=False)
+
+dfs = []
+for nc in range(n_chunk+1):
+    dfs.append(pd.read_csv(f'./data/{filename}_{nc+1}.csv'))
+df = pd.concat(dfs)
+df.to_csv(f'./data/{filename}.csv', index=False)
 
 
