@@ -31,6 +31,9 @@ def calc_oskill_bycr(df, os_sg, os_mu):
         # Sigma et Mu de chaque equipe = somme des Sigma/Mu de chaque players -ok
         df[f'S_SGSQ_{i}'] = df[f'S_SGC_CH{i}'] ** 2 + df[f'S_SGC_DV{i}'] ** 2 
         df[f'S_MU_{i}'] = df[f'OS_MU_CH{i}'] + df[f'OS_MU_DV{i}']
+
+        #Ordinal
+        df[f'OS_ORD_{i}'] = df[f'S_MU_{i}'] - 3 * (df[f'S_SGC_CH{i}'] + df[f'S_SGC_DV{i}'])
   
     # Calcul "C" = sqrt(somme pour toutes les equipes de Sigma^2 + beta^2) -ok
     bsq = float(25.0 / 6.0) ** 2
@@ -59,13 +62,30 @@ def calc_oskill_bycr(df, os_sg, os_mu):
     df['S_OMG_1'] = (df['S_OMG_11'] - df['S_OMG_12']) * df['S_SGSQ_1'] / c
 
 
-    df['S_N_MU_CH1'] = df['OS_MU_CH1'] + (df['S_OMG_1'] * df['S_SGC_CH1'] ** 2 / df['S_SGSQ_1'])
-    df['S_N_MU_DV1'] = df['OS_MU_DV1'] + (df['S_OMG_1'] * df['S_SGC_DV1'] ** 2 / df['S_SGSQ_1'])
-    df['S_N_SG_CH1'] = df['S_SGC_CH1'] * np.sqrt(np.maximum(1 - (df['S_DELTA_1'] * df['S_SGC_CH1']**2 / df['S_SGSQ_1']), 0.01))
-    df['S_N_SG_DV1'] = df['S_SGC_DV1'] * np.sqrt(np.maximum(1 - (df['S_DELTA_1'] * df['S_SGC_DV1']**2 / df['S_SGSQ_1']), 0.01))
+    df['S_DT_MU_CH1'] = (df['S_OMG_1'] * df['S_SGC_CH1'] ** 2 / df['S_SGSQ_1'])
+    df['S_DT_MU_DV1'] = (df['S_OMG_1'] * df['S_SGC_DV1'] ** 2 / df['S_SGSQ_1'])
+    df['S_DT_SG_CH1'] = np.sqrt(np.maximum(1 - (df['S_DELTA_1'] * df['S_SGC_CH1']**2 / df['S_SGSQ_1']), 0.01))
+    df['S_DT_SG_DV1'] = np.sqrt(np.maximum(1 - (df['S_DELTA_1'] * df['S_SGC_DV1']**2 / df['S_SGSQ_1']), 0.01))
 
-    os_sg.update(df.groupby(['ch_nom_1'])['S_N_SG_CH1'].agg("mean").to_dict())
-    os_mu.update(df.groupby(['ch_nom_1'])['S_N_MU_CH1'].agg("mean").to_dict())
+    bych = df.groupby(['ch_nom_1'])
+    n_mu = bych['S_DT_MU_CH1'].agg("sum").to_dict()
+    n_sg = bych['S_DT_SG_CH1'].agg("prod").to_dict()
+    n_mu = {k:(os_mu.get(k,dmu)+v) for k,v in n_mu.items()}
+    n_sg = {k:(os_sg.get(k,dsg)+v) for k,v in n_sg.items()}
+    os_sg.update(n_sg)
+    os_mu.update(n_mu)
+
+    bych = df.groupby(['ch_driver_1'])
+    n_mu = bych['S_DT_MU_DV1'].agg("sum").to_dict()
+    n_sg = bych['S_DT_SG_DV1'].agg("prod").to_dict()
+    n_mu = {k:(os_mu.get(k,dmu)+v) for k,v in n_mu.items()}
+    n_sg = {k:(os_sg.get(k,dsg)+v) for k,v in n_sg.items()}
+    os_sg.update(n_sg)
+    os_mu.update(n_mu)
+    #os_sg.update(df.groupby(['ch_nom_1'])['S_N_SG_CH1'].agg("mean").to_dict())
+    #os_mu.update(df.groupby(['ch_nom_1'])['S_N_MU_CH1'].agg("mean").to_dict())
+    #os_sg.update(df.groupby(['ch_driver_1'])['S_N_SG_DV1'].agg("mean").to_dict())
+    #os_mu.update(df.groupby(['ch_driver_1'])['S_N_MU_DV1'].agg("mean").to_dict())
 
     to_drop = [c for c in df.columns if c.startswith('S_')]
     df.drop(to_drop, axis=1, inplace=True)
