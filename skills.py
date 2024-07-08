@@ -31,9 +31,7 @@ def calc_oskill_bycr(df, os_sg, os_mu):
         # Sigma et Mu de chaque equipe = somme des Sigma/Mu de chaque players -ok
         df[f'S_SGSQ_{i}'] = df[f'S_SGC_CH{i}'] ** 2 + df[f'S_SGC_DV{i}'] ** 2 
         df[f'S_MU_{i}'] = df[f'OS_MU_CH{i}'] + df[f'OS_MU_DV{i}']
-
-        #Ordinal
-        df[f'OS_ORD_{i}'] = df[f'S_MU_{i}'] - 3 * (df[f'S_SGC_CH{i}'] + df[f'S_SGC_DV{i}'])
+        df[f'OS_ORD_{i}'] = df[f'S_MU_{i}'] - 3 * np.sqrt(df[f'S_SGSQ_{i}'])
   
     # Calcul "C" = sqrt(somme pour toutes les equipes de Sigma^2 + beta^2) -ok
     bsq = float(25.0 / 6.0) ** 2
@@ -47,8 +45,8 @@ def calc_oskill_bycr(df, os_sg, os_mu):
         df[f'S_A_{i}'] = 1
         df.loc[df['win'] == 0.5, f'S_A_{i}'] = 2
 
-    df[f'S_SUMQ_1'] = df[f'S_SUMQT_1'] + np.where(df['win'] >= 0.5, df[f'S_SUMQT_1'], 0)
-    df[f'S_SUMQ_2'] = df[f'S_SUMQT_2'] + np.where(df['win'] <= 0.5, df[f'S_SUMQT_2'], 0)
+    df[f'S_SUMQ_1'] = df[f'S_SUMQT_1'] + np.where(df['win'] >= 0.5, df[f'S_SUMQT_2'], 0)
+    df[f'S_SUMQ_2'] = df[f'S_SUMQT_2'] + np.where(df['win'] <= 0.5, df[f'S_SUMQT_1'], 0)
 
     #i = 1; q = 1
     df['S_DELTA_11'] =  df['S_SUMQT_1'] / df['S_SUMQ_1'] * (1 - df['S_SUMQT_1'] / df['S_SUMQ_1']) / df['S_A_1']
@@ -61,27 +59,27 @@ def calc_oskill_bycr(df, os_sg, os_mu):
     df['S_OMG_12'] = np.where(df['win'] <= 0.5, df['S_OMG_12'], 0)
     df['S_OMG_1'] = (df['S_OMG_11'] - df['S_OMG_12']) * df['S_SGSQ_1'] / c
 
+    df['OS_D_MU_CH1'] = (df['S_OMG_1'] * df['S_SGC_CH1'] ** 2 / df['S_SGSQ_1'])
+    df['OS_D_MU_DV1'] = (df['S_OMG_1'] * df['S_SGC_DV1'] ** 2 / df['S_SGSQ_1'])
+    df['OS_D_SG_CH1'] = np.sqrt(np.maximum(1 - (df['S_DELTA_1'] * df['S_SGC_CH1']**2 / df['S_SGSQ_1']), 0.01))
+    df['OS_D_SG_DV1'] = np.sqrt(np.maximum(1 - (df['S_DELTA_1'] * df['S_SGC_DV1']**2 / df['S_SGSQ_1']), 0.01))
 
-    df['S_DT_MU_CH1'] = (df['S_OMG_1'] * df['S_SGC_CH1'] ** 2 / df['S_SGSQ_1'])
-    df['S_DT_MU_DV1'] = (df['S_OMG_1'] * df['S_SGC_DV1'] ** 2 / df['S_SGSQ_1'])
-    df['S_DT_SG_CH1'] = np.sqrt(np.maximum(1 - (df['S_DELTA_1'] * df['S_SGC_CH1']**2 / df['S_SGSQ_1']), 0.01))
-    df['S_DT_SG_DV1'] = np.sqrt(np.maximum(1 - (df['S_DELTA_1'] * df['S_SGC_DV1']**2 / df['S_SGSQ_1']), 0.01))
+    df['OS_N_MU_CH1'] = df['OS_MU_CH1'] + (df['S_OMG_1'] * df['S_SGC_CH1'] ** 2 / df['S_SGSQ_1'])
+    df['OS_N_MU_DV1'] = df['OS_MU_DV1'] + (df['S_OMG_1'] * df['S_SGC_DV1'] ** 2 / df['S_SGSQ_1'])
+    df['OS_N_SG_CH1'] = df['S_SGC_CH1'] * np.sqrt(np.maximum(1 - (df['S_DELTA_1'] * df['S_SGC_CH1']**2 / df['S_SGSQ_1']), 0.01))
+    df['OS_N_SG_DV1'] = df['S_SGC_DV1'] * np.sqrt(np.maximum(1 - (df['S_DELTA_1'] * df['S_SGC_DV1']**2 / df['S_SGSQ_1']), 0.01))
 
     bych = df.groupby(['ch_nom_1'])
-    n_mu = bych['S_DT_MU_CH1'].agg("sum").to_dict()
-    n_sg = bych['S_DT_SG_CH1'].agg("prod").to_dict()
-    n_mu = {k:(os_mu.get(k,dmu)+v) for k,v in n_mu.items()}
-    n_sg = {k:(os_sg.get(k,dsg)+v) for k,v in n_sg.items()}
-    os_sg.update(n_sg)
-    os_mu.update(n_mu)
+    schu = bych['OS_D_SG_CH1'].agg("prod")*bych['S_SGC_CH1'].agg('first')
+    mchu = bych['OS_D_MU_CH1'].agg("sum")+bych['OS_MU_CH1'].agg('first')
+    os_sg.update(schu.to_dict())
+    os_mu.update(mchu.to_dict())
+    bydv = df.groupby(['ch_driver_1'])
+    sdvu = bydv['OS_D_SG_DV1'].agg("mean")*bydv['S_SGC_DV1'].agg('first')
+    mdvu = bydv['OS_D_MU_DV1'].agg("sum")+bydv['OS_MU_DV1'].agg('first')
+    os_sg.update(sdvu.to_dict())
+    os_mu.update(mdvu.to_dict())
 
-    bych = df.groupby(['ch_driver_1'])
-    n_mu = bych['S_DT_MU_DV1'].agg("sum").to_dict()
-    n_sg = bych['S_DT_SG_DV1'].agg("prod").to_dict()
-    n_mu = {k:(os_mu.get(k,dmu)+v) for k,v in n_mu.items()}
-    n_sg = {k:(os_sg.get(k,dsg)+v) for k,v in n_sg.items()}
-    os_sg.update(n_sg)
-    os_mu.update(n_mu)
     #os_sg.update(df.groupby(['ch_nom_1'])['S_N_SG_CH1'].agg("mean").to_dict())
     #os_mu.update(df.groupby(['ch_nom_1'])['S_N_MU_CH1'].agg("mean").to_dict())
     #os_sg.update(df.groupby(['ch_driver_1'])['S_N_SG_DV1'].agg("mean").to_dict())
@@ -91,9 +89,9 @@ def calc_oskill_bycr(df, os_sg, os_mu):
     df.drop(to_drop, axis=1, inplace=True)
     return df.reset_index(drop=True)
 
-def calc_oskill(df):
-  os_sg = {}
-  os_mu = {}
+def calc_oskill(df, sg={}, mu={}):
+  os_sg = sg
+  os_mu = mu
   df['win'] = (np.sign(df.ch_ordreArrivee_2 - df.ch_ordreArrivee_1) + 1.0) / 2.0
   bycr = df.groupby('aid_cr')
   r = bycr.apply(lambda x: calc_oskill_bycr(x,os_sg,os_mu))
