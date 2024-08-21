@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from statistics import NormalDist
 
 '''df = pd.read_csv('./data/volcania_p.csv')
 df =df[['aid_cr', 'ch_nom_1', 'ch_driver_1', 'ch_ordreArrivee_1', 'ch_nom_2', 'ch_driver_2', 'ch_ordreArrivee_2']]
@@ -11,6 +12,7 @@ df.to_csv('./data/volcania_s.csv', index=False)'''
 b_sg = {}
 b_mu = {}'''
 
+_normal = NormalDist()
 
 def calc_oskill_bycr(df, os_sg, os_mu):
     
@@ -80,10 +82,9 @@ def calc_oskill_bycr(df, os_sg, os_mu):
     os_sg.update(sdvu.to_dict())
     os_mu.update(mdvu.to_dict())
 
-    #os_sg.update(df.groupby(['ch_nom_1'])['S_N_SG_CH1'].agg("mean").to_dict())
-    #os_mu.update(df.groupby(['ch_nom_1'])['S_N_MU_CH1'].agg("mean").to_dict())
-    #os_sg.update(df.groupby(['ch_driver_1'])['S_N_SG_DV1'].agg("mean").to_dict())
-    #os_mu.update(df.groupby(['ch_driver_1'])['S_N_MU_DV1'].agg("mean").to_dict())
+    #prob win
+    y = (df['S_MU_1'] - df['S_MU_2']) / np.sqrt(df['S_SGSQ_1'] + df['S_SGSQ_2'] + 4 * bsq)
+    df['OS_PWIN_1'] = y.apply(lambda x : _normal.cdf(x))
 
     to_drop = [c for c in df.columns if c.startswith('S_')]
     df.drop(to_drop, axis=1, inplace=True)

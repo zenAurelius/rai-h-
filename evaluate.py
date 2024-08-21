@@ -20,7 +20,7 @@ def pct_place(df):
     print(f'gain gagnant = {df.gain_gagnant.sum()}')
 
 
-def evaluate_indicateur(df, idname, sens):
+def evaluate_indicateur(df, idname, ascending=False):
     ntot = len(df)
     # 1. evaluation brute en 1c1
     print('* evaluation brute 1c1')
@@ -34,15 +34,51 @@ def evaluate_indicateur(df, idname, sens):
     nfalse = 2*len(df[(df['ch_ordreArrivee_1'] > df['ch_ordreArrivee_2']) & (df[f'{idname}_1'] > df[f'{idname}_2'])])
     print(f'[{idname}] true = {100 * ntrue / ntot} - false = {100 * nfalse / ntot}')
     
-    # 2. evalutation par ordre
-    # filtre sur les cas avec cotes - reset
-    #result = df[df.ch_dernierRapportDirect_rapport_1 > 0].groupby(['aid_cr', 'ch_nom_1']).first().reset_index()
+    # 2. evalutation par ordre de l'indicateur dans la course
+    # filtre sur les cas avec cotes - reset 
+    result = df[df.ch_dernierRapportDirect_rapport_1 > 0].groupby(['aid_cr', 'ch_nom_1']).first().reset_index()
+    
+    bycr = result.groupby('aid_cr')
+    result[f'{idname}_R'] = bycr[f'{idname}_1'].rank(ascending=ascending)
+    result['COTE_R'] = bycr['ch_dernierRapportDirect_rapport_1'].rank()
+    print(f'__{idname}__')
+    pct_place(result[result[f'{idname}_R'] == 1.0].copy())
+    print('__cote__')
+    pct_place(result[result.COTE_R == 1.0].copy())
+
+    # 3. evaluation par quartile : on prend les limites des quartiles et on mesure les perfs du premier seulement si dans le quartile
+    firsts = result[result[f'{idname}_R'] == 1.0]
+    q4 = firsts[f'{idname}_1'].quantile([0.25,0.5,0.75])
+    print(f'{idname} = {q4}')
+    pct_place(firsts[firsts[f'{idname}_1'] < q4[0.25]].copy())
+    pct_place(firsts[(firsts[f'{idname}_1'] > q4[0.25]) & (firsts[f'{idname}_1'] < q4[0.5])].copy())
+    pct_place(firsts[(firsts[f'{idname}_1'] > q4[0.5]) & (firsts[f'{idname}_1'] < q4[0.75])].copy())
+    pct_place(firsts[firsts[f'{idname}_1'] > q4[0.75]].copy()) 
+
+    # 4. Mise à l'écart des courses les moins bien connues
+    result['OS_SG'] = result['OS_SG_CH1'] + result['OS_SG_DV1']
+    result['OS_SG_M'] = bycr['OS_SG'].transform('mean')
+    firsts = result[result[f'{idname}_R'] == 1.0]
+    q4 = firsts['OS_SG_M'].quantile([0.25,0.5,0.75])
+    print(f'sigma = {q4}')
+    pct_place(firsts[firsts['OS_SG_M'] < q4[0.25]].copy())
+    pct_place(firsts[(firsts['OS_SG_M'] > q4[0.25]) & (firsts['OS_SG_M'] < q4[0.5])].copy())
+    pct_place(firsts[(firsts['OS_SG_M'] > q4[0.5]) & (firsts['OS_SG_M'] < q4[0.75])].copy())
+    pct_place(firsts[firsts['OS_SG_M'] > q4[0.75]].copy()) 
 
 
 ##df[df.ch_nom_1 == 'VALEUR DANOVER'].to_csv('test.csv')
 
-df = pd.read_csv('./data/pmu2016cc_os.csv')
-evaluate_indicateur(df, 'OS_ORD', '')
+df = pd.read_csv('./data/pmu2016sos.csv')
+
+bycrch = df.groupby(['aid_cr', 'ch_nom_1'])
+df['OS_PWIN_2'] = 1- df['OS_PWIN_1']
+df['OS_PWINCR_1'] = bycrch['OS_PWIN_1'].transform('prod')
+df['OS_PWINCR_2'] = 1 - df['OS_PWINCR_1']
+
+evaluate_indicateur(df, 'OS_PWINCR')
+
+evaluate_indicateur(df, 'OS_ORD')
 # result = df[df.ch_dernierRapportDirect_rapport_1 > 0].groupby(['aid_cr', 'ch_nom_1']).first().reset_index()
 # print(len(result))
 # bycr = result.groupby('aid_cr')

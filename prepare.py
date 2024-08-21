@@ -17,8 +17,8 @@ def prepare(df):
     df = combine.un_vs_un(df)
     elapsed_time = time.time() - start_time
     print(f"Elapsed time: {elapsed_time:.2f} seconds")
-    #df = elo1.calc_elo(df, 'ch_nom')
-    #df = elo1.calc_elo(df, 'ch_driver')
+    # df = elo1.calc_elo(df, 'ch_nom')
+    # df = elo1.calc_elo(df, 'ch_driver')
     
     start_time = time.time()
     df = skills.calc_oskill(df)
@@ -29,4 +29,4 @@ def prepare(df):
 
 df = pd.read_csv('./data/2016.csv')
 df = prepare(df)
-df.to_csv('./data/pmu2016cc_osm.csv', index=False)
+df.to_csv('./data/pmu2016sos.csv', index=False)
